@@ -1,0 +1,35 @@
+name: KD Challenge Tests
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Install dependencies
+        run: npm install
+      
+      - name: Run tests
+        id: test
+        run: |
+          npm test -- --reporter=json --outputFile=test-results.json || true
+          echo "TEST_RESULTS<<EOF" >> $GITHUB_OUTPUT
+          cat test-results.json >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+        continue-on-error: true
+      
+      - name: Report results
+        if: always()
+        run: |
+          curl -X POST "https://57628a4afdd4.ngrok-free.app/api/webhooks/github-actions?repo=uanandaraja/kd-personal-landing-page" \
+            -H "Content-Type: application/json" \
+            -H "X-GitHub-Event: test-results" \
+            -d @test-results.json || echo "Failed to report results"
